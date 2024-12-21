@@ -39,6 +39,14 @@ async function init() {
       new djs.SlashCommandBuilder()
         .setName('start')
         .setDescription('Start a new chat.')
+        .toJSON(),
+      new djs.SlashCommandBuilder()
+        .setName('stop')
+        .setDescription('Stop chatting.')
+        .toJSON(),
+      new djs.SlashCommandBuilder()
+        .setName('deanon')
+        .setDescription('Deanonamize to find who you are chatting to.')
         .toJSON()
     ]);
   });
@@ -63,16 +71,12 @@ async function init() {
 }
 
 function save() {
-  try {
-    db = JSON.parse(fs.readFileSync(db.json));
-  } catch (e) {
-    db = {};
-  }
+  fs.writeFileSync('db.json', JSON.stringify(db));
 }
 
 function load() {
   try {
-    db = JSON.parse(fs.readFileSync(db.json));
+    db = JSON.parse(fs.readFileSync('db.json'));
   } catch (e) {
     db = {};
   }
