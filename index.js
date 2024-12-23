@@ -3,7 +3,6 @@
 require("dotenv").config();
 const djs = require("discord.js");
 const fs = require("fs");
-const { Z_ASCII } = require("zlib");
 let db = {};
 
 const client = new djs.Client({
@@ -15,6 +14,10 @@ const client = new djs.Client({
     djs.Partials.User
   ],
 });
+
+function getUser(x) {
+  return client.users.fetch(x);
+}
 
 async function init() {
   process.on('uncaughtException', e => console.error(e));
@@ -34,7 +37,7 @@ async function init() {
       activities: [
         {
           name: 'you sleep',
-          type: 3, 
+          type: 3,
           // 0 = PLAYING, 1 = STREAMING, 2 = LISTENING, 3 = WATCHING
         },
       ],
@@ -59,8 +62,12 @@ async function init() {
     if (x.channel.type == 1 && !x.author.bot) {
       if (db[x.author.id]?.chat) {
         console.log(x.author.id, 'sent a message to', db[x.author.id].chat);
-        client.users.fetch(db[x.author.id].chat).then(y =>
-          y.send(x.content.split('\n').map(x => '> ' + x).join('\n')))
+        getUser(db[x.author.id].chat).then(y =>
+          y.send({
+            content: x.content.replaceAll('@user', '<@' + db[x.author.id].chat + '>')
+              .split('\n').map(x => '> ' + x).join('\n'),
+            embeds: x.embeds
+          }))
       } else {
         x.author.send('Use /start to connect to someone!')
       }
@@ -82,14 +89,14 @@ async function init() {
             content: 'Deanonamizing...',
             ephemeral: true
           });
-          client.users.fetch(db[x.user.id].chat).then(y => {
-            y.send('You are talking to ' + x.user.username);
-            x.user.send('You are talking to ' + y.username);
+          getUser(db[x.user.id].chat).then(y => {
+            y.send('You are talking to ' + x.user.tag);
+            x.user.send('You are talking to ' + y.tag);
           });
           console.log(x.user.id, 'deanonamized with', db[x.user.id].chat);
         } else {
           db[x.user.id].deanon = db[x.user.id].chat;
-          client.users.fetch(db[x.user.id].chat).then(y =>
+          getUser(db[x.user.id].chat).then(y =>
             y.send('User requested deanonamization. ' +
               'Type /deanon if you want to find who you are talking to!'));
           x.reply({
@@ -105,7 +112,7 @@ async function init() {
       console.log(x.user.id, 'disconnected from', db[x.user.id].chat);
       if (db[x.user.id].chat) {
         db[db[x.user.id].chat].chat = null;
-        client.users.fetch(db[x.user.id].chat).then(y =>
+        getUser(db[x.user.id].chat).then(y =>
           y.send('User disconnected, new user being found...'));
         newConnect(db[x.user.id].chat, true);
         db[x.user.id].chat = null;
@@ -153,12 +160,12 @@ function newConnect(x, y) {
   oldchat = db[x].chat;
   db[x].chat = users[Math.floor(Math.random() * users.length)] ?? null;
   if (db[x].chat) db[db[x].chat].chat = x;
-  if (y && !db[x].chat) client.users.fetch(x).then(y => y.send('Cannot find new user. ):'));
-  if (db[x].chat) client.users.fetch(db[x].chat).then(x => x.send('New user connected. Say hi!'));
+  if (y && !db[x].chat) getUser(x).then(y => y.send('Cannot find new user. ):'));
+  if (db[x].chat) getUser(db[x].chat).then(x => x.send('New user connected. Say hi!'));
   console.log(x, 'connected to', db[x].chat);
   if (oldchat && !y) {
     db[oldchat].chat = null;
-    client.users.fetch(oldchat).then(y => y.send('User disconnected, ' +
+    getUser(oldchat).then(y => y.send('User disconnected, ' +
       (db[x].chat == null ? 'no more users can be found. ):' : 'new user being found...')));
     if (db[x].chat)
       newConnect(oldchat, true);
